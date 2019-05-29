@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <title>JSON Content</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.27/esri/css/esri.css">
+    <style>
+      body {
+        font-family: "Arial Unicode MS, Arial, sans-serif";
+      }
+
+      #content {
+        width: 800px;
+        height: 350px;
+        padding: 5px;
+        overflow: auto;
+        border: solid 2px #AAAAAA;
+        background-color: #FFFFFF;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        -o-border-radius: 5px;
+        border-radius: 5px;
+        -moz-box-shadow: 0 0 0.5em black;
+        -webkit-box-shadow: 0 0 0.5em black;
+        -o-box-shadow: 0 0 0.5em black;
+        box-shadow: 0 0 0.5em black;
+      }
+
+      .failure {
+        color: red;
+      }
+
+      #status {
+        font-size: 12px;
+      }
+
+    </style>
+
+    <script src="https://js.arcgis.com/3.27/"></script>
+    <script>
+      require([
+          "dojo/dom",
+          "dojo/on",
+          "dojo/dom-class",
+          "dojo/json",
+          "esri/config",
+          "esri/request",
+          "dojo/domReady!"
+        ],
+        function(
+          dom,
+          on,
+          domClass,
+          dojoJson,
+          esriConfig,
+          esriRequest
+        ) {
+          // Use CORS
+          esriConfig.defaults.io.corsEnabledServers.push("earthquake.usgs.gov"); // supports CORS
+          // Use proxy if the server doesn't support CORS
+          // esriConfig.defaults.io.proxyUrl = "/proxy/";  
+
+          var dataUrl = ""
+					var longitude = ""
+          var latitude = ""
+
+          dom.byId("content").value = "";
+
+          //on load, submit request for token
+
+
+          //handle the Go button's click event
+          on(dom.byId("submitRequest"), "click", getLocation);
+
+          function getContent() {
+            var contentDiv = dom.byId("content");
+            contentDiv.value = "";
+            domClass.remove(contentDiv, "failure");
+            dom.byId("status").innerHTML = "Downloading...";
+            
+            dataUrl = "https://gisservices.its.ny.gov/arcgis/rest/services/NYS_Civil_Boundaries/FeatureServer/7/query?where=1%3D1&objectIds=&time=&geometry=" + longitude + "%2C+" + latitude + "&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&distance=10&units=esriSRUnit_StatuteMile&relationParam=&outFields=*&returnGeometry=false&maxAllowableOffset=&geometryPrecision=&outSR=&having=&gdbVersion=&historicMoment=&returnDistinctValues=false&returnIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&multipatchOption=xyFootprint&resultOffset=&resultRecordCount=&returnTrueCurves=false&returnExceededLimitFeatures=false&quantizationParameters=&returnCentroid=false&sqlFormat=none&resultType=&f=pjson"
+
+            
+            var requestHandle2 = esriRequest({
+              "url": dataUrl
+            });
+            requestHandle2.then(requestSucceeded, requestFailed);
+
+          }
+
+          function requestSucceeded(response, io) {
+            dom.byId("status").innerHTML = "";
+            dom.byId("content").value = dojoJson.stringify(response.features);
+
+
+          };
+
+          function requestFailed(error, io) {
+            domClass.add(dom.byId("content"), "failure");
+            dom.byId("status").innerHTML = "";
+            dojoJson.toJsonIndentStr = " ";
+            dom.byId("content").value = dojoJson.stringify(error, true);
+          };
+
+          function getLocation() {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(showPosition);
+            } else {
+              dom.byId("coordinates").innerHTML.innerHTML = "Geolocation is not supported by this browser.";
+            }
+          }
+
+          function showPosition(position) {
+            dom.byId("coordinates").innerHTML = "Latitude: " + position.coords.latitude +
+              "<br>Longitude: " + position.coords.longitude;
+              longitude = position.coords.longitude
+              latitude = position.coords.latitude
+              getContent()
+          }
+        });
+
+    </script>
+
+    <body>
+      <p>Click "Search" to query for village boundaries within 10 miles of your location. </p>
+      <p>
+        <input id="submitRequest" style="height:35px;list-style:none;" type="button" value="Search" />
+      </p>
+      
+      
+        <span id="status"></span>
+        <span id="coordinates"></span>
+        <h2>JSON</h2>
+        <p>
+        <textarea id="content"></textarea>
+      </p>
+    </body>
